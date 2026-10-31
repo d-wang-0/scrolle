@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NPM_CONFIG_MIN_RELEASE_AGE: 7
+  NPM_CONFIG_ENGINE_STRICT: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Restore extension signing key
+        run: |
+          if [ -n "$EXTENSION_PEM" ]; then printf '%s' "$EXTENSION_PEM" > extension.pem; fi
+        env:
+          EXTENSION_PEM: ${{ secrets.EXTENSION_PEM }}
+      - run: npm run build:single && npm run build:crx && npm run build:zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: |
+            dist-single/scrolle.html
+            dist-crx/scrolle.crx
+            dist-crx/scrolle-extension.zip
+
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm run build:exe
+      - uses: actions/upload-artifact@v7
+        with:
+          name: exe
+          path: src-tauri/target/release/scrolle.exe
+
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Restore debug keystore
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$DEBUG_KEYSTORE_B64" ]; then echo "::error::DEBUG_KEYSTORE_B64 secret is not set"; exit 1; fi
+          mkdir -p ~/.android
+          printf '%s' "$DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+      - run: npm ci
+      - run: npm run build:apk
+      - uses: actions/upload-artifact@v7
+        with:
+          name: apk
+          path: dist-apk/scrolle.apk
+
+  release:
+    needs: [web, exe, apk]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - run: ls -R artifacts
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files="artifacts/dist-single/scrolle.html artifacts/dist-crx/scrolle.crx artifacts/dist-crx/scrolle-extension.zip artifacts/scrolle.exe artifacts/scrolle.apk"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+          fi
