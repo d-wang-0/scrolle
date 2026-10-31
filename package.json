@@ -1,0 +1,46 @@
+{
+  "name": "scrolle",
+  "private": true,
+  "version": "0.0.0",
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "npm": ">=11.10.0"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:single": "node scripts/build.mjs single",
+    "build:extension": "node scripts/build.mjs extension",
+    "build:crx": "node scripts/build.mjs crx",
+    "build:zip": "node scripts/build.mjs zip",
+    "preview": "vite preview",
+    "screenshots": "node scripts/screenshots.mjs",
+    "test": "vitest",
+    "tauri": "tauri",
+    "build:exe": "node scripts/build.mjs exe",
+    "android:icons": "node scripts/android-icons.mjs",
+    "build:apk": "node scripts/build.mjs apk",
+    "build:all": "node scripts/build.mjs all",
+    "android": "npm run android:icons && npm run build && cap sync android && cap open android"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.4",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tauri-apps/api": "^2.12.3",
+    "bits-ui": "^2.19.5",
+    "fflate": "^0.8.3",
+    "svelte": "^5.57.2"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@tauri-apps/cli": "^2.12.2",
+    "happy-dom": "^21.0.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}

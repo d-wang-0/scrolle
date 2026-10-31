@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="edge" gradientUnits="userSpaceOnUse" x1="64" x2="64" y1="4.9627" y2="123.9005">
+      <stop offset="0.0147" stop-color="#4f8cff" />
+      <stop offset="0.2039" stop-color="#4a86f8" />
+      <stop offset="1" stop-color="#2a5fd6" />
+    </linearGradient>
+    <linearGradient id="page" gradientUnits="userSpaceOnUse" x1="66.8107" x2="66.8107" y1="9.5233" y2="119.6193">
+      <stop offset="0.0147" stop-color="#fbfcff" />
+      <stop offset="0.2517" stop-color="#f3f6fc" />
+      <stop offset="0.5799" stop-color="#e3e9f5" />
+      <stop offset="0.9599" stop-color="#c3cfe6" />
+      <stop offset="1" stop-color="#b9c6e2" />
+    </linearGradient>
+    <linearGradient id="roll" gradientUnits="userSpaceOnUse" x1="85.2631" x2="85.2631" y1="101.5393" y2="120.8565">
+      <stop offset="0.0147" stop-color="#fbfcff" />
+      <stop offset="0.2413" stop-color="#eef2fa" />
+      <stop offset="0.6006" stop-color="#cdd7ea" />
+      <stop offset="0.9169" stop-color="#a9b8d8" />
+    </linearGradient>
+    <linearGradient id="pageS" href="#page" gradientUnits="userSpaceOnUse" x1="64" x2="64" y1="20" y2="108" />
+    <linearGradient id="rollTop" href="#roll" gradientUnits="userSpaceOnUse" x1="64" x2="64" y1="20" y2="44" />
+    <linearGradient id="rollBot" href="#roll" gradientUnits="userSpaceOnUse" x1="64" x2="64" y1="88" y2="108" />
+    <linearGradient id="edgeS" href="#edge" gradientUnits="userSpaceOnUse" x1="64" x2="64" y1="16" y2="112" />
+  </defs>
+  <!-- The artwork spans x 13-123, y 17-111; scale it up and center it so it fills the canvas like the old icon did. -->
+  <g transform="translate(64 64) scale(1.07) translate(-68 -64)">
+  <path d="M28 20 H92 C98.6 20 104 25.4 104 32 V88 H64 C64 100 58.6 108 52 108 C45.4 108 40 102.6 40 96 V38 C40 26 34 20 28 20 Z" fill="url(#pageS)" stroke="url(#edgeS)" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M28 20 C21 20 16 25 16 32 V36 C16 40.4 19.6 44 24 44 H40 V38 C40 26 34 20 28 20 Z" fill="url(#rollTop)" stroke="url(#edgeS)" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M64 88 H112 C116.4 88 120 91.6 120 96 V100 C120 104.4 116.4 108 112 108 H52 C58.6 108 64 100 64 88 Z" fill="url(#rollBot)" stroke="url(#edgeS)" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <line x1="52" y1="33" x2="92" y2="33" stroke="url(#edgeS)" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+  <line x1="52" y1="44" x2="84" y2="44" stroke="url(#edgeS)" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+  <line x1="52" y1="55" x2="92" y2="55" stroke="url(#edgeS)" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+  <line x1="52" y1="66" x2="80" y2="66" stroke="url(#edgeS)" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+  <line x1="52" y1="77" x2="88" y2="77" stroke="url(#edgeS)" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+node_modules
+dist
+dist-single
+dist-extension
+dist-crx
+dist-apk
+extension.pem
+dist-ssr
+*.local
+.vite
+.git_*
+.git
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# Books / assets we don't commit
+*.epub

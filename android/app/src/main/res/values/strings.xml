@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Scrolle</string>
+    <string name="title_activity_main">Scrolle</string>
+    <string name="package_name">com.example.scrolle</string>
+    <string name="custom_url_scheme">com.example.scrolle</string>
+</resources>

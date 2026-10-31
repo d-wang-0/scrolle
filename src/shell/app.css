@@ -1,0 +1,171 @@
+/* Shell chrome. Theme variables switch on <html data-theme> (dark until it says light, so nothing paints white
+   before the app has mounted); the book itself
+   is styled by its compiled CSS inside .epub-book. */
+
+:root {
+  --bar-h: 3rem;
+  --ctl-h: 2.2rem;
+  --search-btn-w: 2.4rem;
+  --accent: #3a7afe;
+  --accent-soft: rgba(58, 122, 254, 0.18);
+}
+:root:not([data-theme="light"]) {
+  color-scheme: dark;
+  --page: #000; --chrome: #111; --fg: #e8e8e8; --fg-dim: #999; --line: #2c2c2c;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #fff; --chrome: #f4f4f4; --fg: #111; --fg-dim: #666; --line: #d8d8d8;
+}
+
+* { box-sizing: border-box; }
+/* The page still scrolls natively; its bar is hidden and Scrollbar.svelte draws a replacement. */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: var(--page); color: var(--fg); }
+
+/* Buttons (also styles Bits UI triggers, which carry the class). */
+.btn {
+  font: inherit; color: var(--fg); background: none; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem 0.7rem;
+}
+.btn:hover { background: var(--accent-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.small { font-size: 0.8rem; justify-self: start; }
+
+/* Floating controls in the top corners (no full-width bar). */
+.corner {
+  position: fixed; z-index: 30; top: calc(0.5rem + env(safe-area-inset-top));
+  display: flex; gap: 0.4rem; align-items: center;
+}
+.corner.left { left: 0.5rem; }
+/* Clear of the custom scrollbar (14px), which now runs the full window height. */
+.corner.right { right: calc(0.5rem + 14px); }
+/* Every toolbar button has the same size, which also lines up the search toggle with the search box beside it. */
+.corner .btn { display: grid; place-items: center; width: var(--search-btn-w); height: var(--ctl-h); padding: 0; }
+.corner .btn { background: var(--chrome); opacity: 0.85; }
+.corner .btn:hover, .corner .btn:focus-visible, .corner .btn[aria-pressed="true"] { opacity: 1; }
+
+/* Phone-width Android app: the chrome is out of the way until the page is tapped (App.svelte). */
+html[data-chrome="hidden"] :is(.corner, .foot, .track) { opacity: 0; pointer-events: none; }
+.corner, .foot, .track { transition: opacity 0.15s ease; }
+
+/* Bottom status: chapter title and percentage, floating bottom right over the page. */
+.foot {
+  /* Ends where the contents sidebar and the custom scrollbar (14px) begin. */
+  position: fixed; z-index: 25; left: 0; right: calc(var(--right-w) + 14px); bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  pointer-events: none; /* the strip itself never blocks the text */
+}
+.foot .info {
+  display: flex; justify-content: flex-end;
+  padding: 0 0.5rem 0.25rem; font-size: 0.7rem; color: var(--fg-dim);
+}
+/* Chapter and percentage form one pill floating over the page, with a faint backing so it stays legible. */
+.foot .status {
+  display: flex; gap: 0.7rem; min-width: 0; max-width: 100%;
+  background: color-mix(in srgb, var(--page) 80%, transparent);
+  border-radius: 4px; padding: 0.1rem 0.4rem; pointer-events: auto;
+}
+.foot .chapter {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer;
+  text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.foot .pct { flex: none; }
+.foot .chapter:hover { color: var(--fg); }
+.foot .pct { font-variant-numeric: tabular-nums; }
+
+/* Layout: the sidebars are fixed panels (search left, contents right), but a spacer of
+   the same width (--left-w / --right-w, 0 when closed) reserves their room, so <main>
+   is exactly the space left over. */
+.layout { display: flex; --left-w: 0px; --right-w: 0px; }
+.layout > .spacer.left { flex: none; width: var(--left-w); }
+.layout > .spacer.right { flex: none; width: var(--right-w); }
+.layout > main { flex: 1; min-width: 0; }
+/* On narrow windows the sidebars overlay the book instead of squeezing it. */
+@media (max-width: 640px) { .layout { --left-w: 0px !important; --right-w: 0px !important; } }
+
+/* Reading column */
+main { padding-top: var(--bar-h); }
+/* The column is as wide as the book-width setting allows, but never wider than the
+   space left. It stays where it would be centred in the whole window, moving only as
+   far as needed to clear a sidebar: its position in the window is clamped between the
+   left sidebar's edge and the right sidebar's edge (in <main>'s coordinates, half the
+   free space with the sidebars counted as used, kept between 0 and all the free space). */
+#content {
+  --col: min(var(--book-width), 100%);
+  width: var(--col); padding: 0 1.25rem;
+  margin: 1.5rem 0 4rem min(max((100% - var(--left-w) + var(--right-w) - var(--col)) / 2, 0px), 100% - var(--col));
+}
+/* Below the narrowest column the width setting has nothing to cut down, so on a phone it sets the
+   side margins instead: the slider's narrow end gives wide margins, its wide end none at all.
+   Anything in the book wider than the screen (a long word at a big font size) is clipped rather than
+   scrolling the page sideways, which would also widen the layout viewport past this breakpoint. */
+@media (max-width: 640px) {
+  #content { padding: 0 calc(2.75rem * (1 - var(--width-frac, 0.3))); }
+  html, body { overflow-x: hidden; }
+  #content { overflow-wrap: break-word; }
+}
+/* EPUB stylesheets size text in fractional ems relative to the reader-supplied
+   base; without this they resolve against the 16px browser default. */
+#content .epub-book { font-size: var(--book-font); }
+/* The reader owns page colours; the book's own (inverted for dark by the
+   compiler, scoped to .epub-book.dark) override these defaults. */
+#content :where(.epub-book) { background: #fff; color: #111; }
+#content :where(.epub-book.dark) { background: #000; color: #e8e8e8; }
+/* Chapter gap (page-break-* no longer separates chapters). */
+#content .epub-book > section { margin-block: 2rem; }
+#content img { max-width: 100%; height: auto; }
+/* Image inversion (settings.invertImages), only on the dark page; "bw" only hits images BookView tagged. */
+#content .epub-book.dark.invert-all :is(img, svg image),
+#content .epub-book.dark.invert-bw img[data-bw] { filter: invert(1); }
+
+/* Search matches (CSS Custom Highlight API; no DOM changes in the book). */
+::highlight(search) { background-color: rgba(255, 200, 0, 0.4); color: inherit; }
+::highlight(search-current) { background-color: #ff9632; color: #000; }
+
+/* Empty state and drag overlay */
+main.empty { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 0.75rem; padding-top: 0; color: var(--fg-dim); }
+main.empty p { margin: 0; }
+main.empty progress { width: min(20rem, 80vw); accent-color: var(--accent); }
+.error { color: #ff6b6b; max-width: 30rem; text-align: center; }
+/* Drop zones: replace fills the screen above, add is a bar along the bottom (only with a book open).
+   The one under the pointer is highlighted; the other is the same, but faint and grey. */
+.drop-zones { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; pointer-events: none; }
+.drop-zone {
+  display: grid; place-content: center; border: 3px dashed var(--accent); border-radius: 10px;
+  background: rgba(58, 122, 254, 0.2); font-size: 1.4rem; color: var(--fg); pointer-events: auto;
+}
+.drop-zone.replace { flex: 1; }
+.drop-zone.add { flex: none; height: 4.5rem; }
+.drop-zone.inactive { background: transparent; border-color: var(--line); }
+/* A darker backing keeps the text readable over the book. */
+.drop-label { padding: 0.25rem 0.8rem; border-radius: 6px; background: rgba(0, 0, 0, 0.6); color: #fff; pointer-events: none; }
+.inactive .drop-label { color: #bbb; }
+
+/* Menu popover (portalled to <body> by Bits UI, so styles are global). */
+.popover {
+  z-index: 40; width: min(18rem, calc(100vw - 1.5rem)); padding: 0.9rem; display: grid; gap: 0.9rem;
+  background: var(--chrome); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.popover .actions-col { display: grid; gap: 0.5rem; }
+.popover .actions-col .icons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+/* Icon buttons: the label shows as a tooltip under the button. */
+.btn.icon { position: relative; display: grid; place-items: center; padding: 0.4rem; }
+.btn.icon svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.btn.icon::after {
+  content: attr(data-tip); position: absolute; z-index: 2; top: calc(100% + 6px); left: 50%; translate: -50% 0;
+  padding: 0.2rem 0.5rem; border-radius: 6px; white-space: nowrap; font-size: 0.75rem; pointer-events: none;
+  background: var(--fg); color: var(--page); opacity: 0; transition: opacity 0.1s 0s;
+}
+.btn.icon:hover::after, .btn.icon:focus-visible::after { opacity: 1; transition-delay: 0.35s; }
+.popover .actions-col .btn { text-align: left; }
+.popover .btn:disabled { opacity: 0.4; cursor: default; }
+.popover hr { width: 100%; margin: 0; border: 0; border-top: 1px solid var(--line); }
+.popover .field { display: grid; gap: 0.35rem; font-size: 0.85rem; color: var(--fg-dim); }
+.popover output { float: right; color: var(--fg); }
+.popover input[type="range"] { width: 100%; accent-color: var(--accent); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg [data-toggle-group-item] { font: inherit; border: 0; background: none; color: var(--fg); padding: 0.4rem; cursor: pointer; }
+.seg [data-toggle-group-item][data-state="on"] { background: var(--accent); color: #fff; }

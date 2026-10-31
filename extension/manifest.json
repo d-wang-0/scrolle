@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Scrolle",
+  "version": "0.1.0",
+  "description": "Open .epub files and links in Scrolle.",
+  "permissions": ["webNavigation", "downloads", "storage"],
+  "host_permissions": ["<all_urls>", "file:///*"],
+  "background": { "service_worker": "background.js" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "icons": { "16": "icons/32x32.png", "32": "icons/32x32.png", "48": "icons/128x128.png", "128": "icons/128x128.png" },
+  "action": { "default_title": "Open Scrolle", "default_icon": { "16": "icons/32x32.png", "32": "icons/32x32.png" } }
+}

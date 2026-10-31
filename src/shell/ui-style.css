@@ -1,0 +1,187 @@
+/* Borderless chrome in four flavours, picked with ?ui=lite|flat|raised|glass (remembered; ?ui=off
+   goes back to the original look). Everything here only applies under html[data-ui]; delete this file and
+   ui-style.ts to drop it. Fills are translucent, so they sit on whatever surface is behind them. */
+
+html[data-ui]:not([data-theme="light"]) {
+  --fill: rgba(255, 255, 255, 0.07);
+  --fill-hover: rgba(255, 255, 255, 0.13);
+  --inset: rgba(0, 0, 0, 0.38);          /* wells: inputs, switcher tracks, slider tracks */
+  --hi: rgba(255, 255, 255, 0.09);       /* light catching a raised top edge */
+  --edge: rgba(255, 255, 255, 0.07);
+  --drop: rgba(0, 0, 0, 0.55);
+  --chrome: #151516;
+  --hover-hit: color-mix(in srgb, var(--accent) 16%, transparent);   /* a faint, greyish blue */
+  --sel-hit: color-mix(in srgb, var(--accent) 48%, #000);          /* a deeper, more saturated blue than the hover */
+}
+html[data-ui][data-theme="light"] {
+  --fill: rgba(0, 0, 0, 0.06);
+  --fill-hover: rgba(0, 0, 0, 0.11);
+  --inset: rgba(0, 0, 0, 0.07);
+  --hi: rgba(255, 255, 255, 0.9);
+  --edge: rgba(0, 0, 0, 0.1);
+  --drop: rgba(0, 0, 0, 0.22);
+  --hover-hit: color-mix(in srgb, var(--accent) 12%, #fff);
+  --sel-hit: color-mix(in srgb, var(--accent) 38%, #fff);
+}
+
+/* ---------- Darker chrome (dark theme): the greys behind sidebars, popovers and corner buttons ---------- */
+html[data-bg="black"]:not([data-theme="light"]) { --chrome: #000; }
+html[data-bg="dim"]:not([data-theme="light"]) { --chrome: #030304; }
+/* Nothing is darker than these, so wells (inputs, switcher and slider tracks, checkboxes) become a light tint instead. */
+html[data-bg]:not([data-theme="light"]) { --inset: rgba(255, 255, 255, 0.09); }
+/* Menus and popovers sit one step above black, so inside them the wells can go darker than the surface, as on grey chrome. */
+html[data-bg]:not([data-theme="light"]) .popover { --inset: rgba(0, 0, 0, 0.7); background: #0b0b0c; }
+
+/* ---------- Shared: no borders, fills instead ---------- */
+html[data-ui] .btn { border: 0; background: var(--fill); }
+html[data-ui] .btn:hover:not(:disabled) { background: var(--fill-hover); }
+html[data-ui] .btn.primary { background: var(--accent); }
+html[data-ui] .btn.primary:hover { background: color-mix(in srgb, var(--accent) 85%, #fff); }
+html[data-ui] .corner .btn { background: color-mix(in srgb, var(--chrome) 85%, transparent); opacity: 1; }
+html[data-ui] .corner .btn:hover { background: color-mix(in srgb, var(--fill-hover) 100%, var(--chrome)); }
+/* Previous / next match arrows are bare glyphs. */
+html[data-ui] .btn.step, html[data-ui] .btn.step:hover { background: none !important; box-shadow: none !important; transform: none; }
+html[data-ui] .btn.step:hover:not(:disabled) { color: var(--fg); }
+
+/* Inputs read as wells cut into the surface. Focus underlines the well; no ring. */
+html[data-ui] .query input { border: 0; outline: 0; background: var(--inset); transition: box-shadow 0.12s; }
+/* Focus only lifts the well's tone; no ring, underline or border. */
+html[data-ui] .query input:focus { outline: 0; box-shadow: none !important; background: color-mix(in srgb, var(--fg) 8%, var(--chrome)); }
+html[data-ui] select { border: 0 !important; background: var(--fill) !important; border-radius: 8px !important; }
+/* Every checkbox (search's, the settings') gets one look: an unchecked box is a dark well, a checked one an accent chip with a tick. */
+html[data-ui] input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; flex: none; width: 1rem; height: 1rem; margin: 0; cursor: pointer;
+  border: 0; border-radius: 5px; background: var(--inset);
+}
+html[data-ui] input[type="checkbox"]:checked {
+  border: 0; background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E") center / 100% no-repeat;
+}
+html[data-ui] input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Segmented controls (off/on switchers): a dark well, the chosen segment a filled chip, small corners. */
+html[data-ui] .seg { border: 0; background: var(--inset); padding: 2px; border-radius: 7px; overflow: visible; }
+html[data-ui] .seg [data-toggle-group-item] { border-radius: 5px; color: var(--fg-dim); transition: background 0.12s, color 0.12s; }
+html[data-ui] .seg [data-toggle-group-item]:hover:not([data-state="on"]) { color: var(--fg); background: var(--fill); }
+html[data-ui] .seg [data-toggle-group-item][data-state="on"] { background: var(--accent); color: #fff; }
+
+/* The Aa case toggle: a quiet button when off, accent when on (a real toggle needs a visible on state). */
+html[data-ui] .btn.case { background: var(--fill); }
+html[data-ui] .btn.case[data-state="on"] { background: var(--accent) !important; color: #fff; }
+
+/* Search hits: hover is a soft blue, the selected one a slightly darker blue. No outline, no bar. */
+html[data-ui] .hit:hover { background: var(--hover-hit); }
+html[data-ui] .hit.current, html[data-ui] .hit.current:hover { outline: 0; box-shadow: none; background: var(--sel-hit); }
+html[data-ui] .group:hover { background: color-mix(in srgb, var(--hover-hit) 100%, var(--chrome)); }
+
+/* Panels and popovers: depth from a shadow, not a rule. */
+html[data-ui] aside, html[data-ui] nav { border: 0; box-shadow: 0 0 32px var(--drop); }
+html[data-ui] .head { border-bottom: 0; padding-bottom: 0.4rem; }
+html[data-ui] .popover hr { border-top: 0; height: 1px; background: var(--fill); }
+html[data-ui] .popover, html[data-ui] .note[role="dialog"] { border: 0; }
+html[data-ui] .note[role="dialog"]::before { border: 0 !important; }
+html[data-ui] .actions { border-top: 0 !important; }
+
+/* Sliders: a sunken pill track, accent fill up to the value (--p, kept in step by ui-style.ts), a round white knob. */
+html[data-ui] input[type="range"] { -webkit-appearance: none; appearance: none; height: 18px; background: none; margin: 0; cursor: pointer; }
+html[data-ui] input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 999px;
+  background: linear-gradient(var(--accent), var(--accent)) 0 / var(--p, 50%) 100% no-repeat, var(--inset);
+}
+html[data-ui] input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: var(--inset); }
+html[data-ui] input[type="range"]::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--accent); }
+html[data-ui] input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -5px; border: 0; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); transition: transform 0.1s;
+}
+html[data-ui] input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
+html[data-ui] input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); }
+html[data-ui] input[type="range"]:active::-webkit-slider-thumb { transform: scale(0.95); }
+html[data-ui] input[type="range"]:focus-visible { outline: 0; }
+html[data-ui] input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 4px var(--hover-hit); }
+
+/* Each variant's popover radius, so what sits inside a popover can round concentrically (see .opt). */
+html[data-ui="lite"], html[data-ui="flat"] { --pop-r: 14px; }
+html[data-ui="raised"] { --pop-r: 16px; }
+html[data-ui="glass"] { --pop-r: 18px; }
+
+/* ---------- Lite: today's look, minus the borders, with rounder corners ---------- */
+html[data-ui="lite"] .btn { background: color-mix(in srgb, var(--fill) 55%, transparent); border-radius: 10px; }
+html[data-ui="lite"] .btn:hover:not(:disabled) { background: var(--fill-hover); }
+html[data-ui="lite"] .btn.primary { background: var(--accent); }
+html[data-ui="lite"] .corner .btn { background: var(--chrome); }
+html[data-ui="lite"] .corner .btn:hover { background: color-mix(in srgb, var(--fill) 100%, var(--chrome)); }
+html[data-ui="lite"] .query input { background: var(--page); border-radius: 10px; }
+html[data-ui="lite"] .popover, html[data-ui="lite"] .note[role="dialog"] { border-radius: 14px; box-shadow: 0 10px 30px var(--drop); }
+html[data-ui="lite"] .hit { border-radius: 8px; }
+
+/* ---------- Flat: tonal fills, wells for inputs ---------- */
+html[data-ui="flat"] .btn, html[data-ui="flat"] .query input { border-radius: 9px; }
+html[data-ui="flat"] .hit { border-radius: 8px; }
+html[data-ui="flat"] .popover, html[data-ui="flat"] .note[role="dialog"] { border-radius: 14px; box-shadow: 0 10px 30px var(--drop); }
+
+/* ---------- Raised: layered surfaces lit from above ----------
+   No gradients and no dark wells. Depth comes from elevation: a raised thing is a slightly lighter solid
+   surface with a 1px light catch on its top edge, and floating things carry a long, soft, layered shadow. */
+html[data-ui="raised"] .btn:not(.primary):not(.step), html[data-ui="raised"] .corner .btn {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fill) 100%, var(--chrome));
+  box-shadow: inset 0 1px 0 var(--hi), 0 1px 1px rgba(0, 0, 0, 0.2), 0 2px 6px -2px var(--drop);
+}
+html[data-ui="raised"] .btn:not(.primary):not(.step):hover:not(:disabled) { background: color-mix(in srgb, var(--fill-hover) 100%, var(--chrome)); }
+html[data-ui="raised"] .btn { transition: transform 0.1s, background 0.15s, box-shadow 0.15s; }
+html[data-ui="raised"] .btn:not(:disabled):active { transform: scale(0.97); box-shadow: inset 0 1px 0 var(--hi); }
+html[data-ui="raised"] .btn.primary {
+  border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px -2px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+html[data-ui="raised"] .query input { border-radius: 10px; }
+html[data-ui="raised"] .hit { border-radius: 8px; }
+html[data-ui="raised"] .popover, html[data-ui="raised"] .note[role="dialog"] {
+  border-radius: 16px; background: color-mix(in srgb, var(--fg) 4%, var(--chrome));
+  box-shadow: inset 0 1px 0 var(--hi), 0 1px 3px rgba(0, 0, 0, 0.3), 0 24px 48px -12px var(--drop);
+}
+
+/* Raised: the settings popovers float over the text, so they get glass's blurred, dithered backdrop (variables defined with the grain
+   below). The dark rule is more specific than the popover's flat #0b0b0c near the top. */
+html[data-ui="raised"] .popover {
+  background: var(--grain), color-mix(in srgb, color-mix(in srgb, var(--fg) 4%, var(--chrome)) var(--glass-bg), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+html[data-ui="raised"][data-bg]:not([data-theme="light"]) .popover, html[data-ui="glass"][data-bg]:not([data-theme="light"]) .popover {
+  background: var(--grain), color-mix(in srgb, #0b0b0c var(--glass-bg), transparent);
+}
+/* Raised: the search and contents sidebars only overlap the text on narrow windows (same breakpoint as app.css), so only then do they
+   get the blur. Their fill stays the chrome colour (black on black), just not fully opaque. */
+@media (max-width: 640px) {
+  html[data-ui="raised"] :is(aside, nav) {
+    background: var(--grain), color-mix(in srgb, var(--chrome) var(--glass-bg), transparent);
+    -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+  }
+}
+
+/* ---------- Glass: pills and translucent, blurred panels with a lit rim ---------- */
+html[data-ui="glass"] .btn, html[data-ui="glass"] .query input { border-radius: 999px; }
+html[data-ui="glass"] .btn { padding-inline: 0.9rem; }
+html[data-ui="glass"] .btn.icon { padding: 0.4rem; }
+html[data-ui="glass"] .query input { padding-inline: 0.9rem; }
+html[data-ui="glass"] .hit { border-radius: 10px; }
+html[data-ui="glass"] .btn:not(.primary):not(.step) { box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 1px 0 var(--hi); }
+/* A faint grain over each blurred surface. A blur of dark, low-contrast shapes has only a handful of brightness levels to step
+   through, which shows as bands; the grain dithers the steps so the falloff reads as a smooth gradient. */
+html[data-ui="glass"], html[data-ui="raised"] { --glass-bg: 86%; --glass-blur: 16px; --glass-filter: blur(var(--glass-blur)) brightness(0.7) saturate(0.5); --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E"); }
+html[data-ui="glass"] aside, html[data-ui="glass"] nav, html[data-ui="glass"] .popover, html[data-ui="glass"] .note[role="dialog"] {
+  background: var(--grain), color-mix(in srgb, var(--chrome) var(--glass-bg), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+html[data-ui="glass"] .popover, html[data-ui="glass"] .note[role="dialog"] { border-radius: 18px; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 1px 0 var(--hi), 0 12px 40px var(--drop); }
+
+/* ---------- A very dark grey line along the inner edge of the sidebars when the chrome is as black as the book ---------- */
+html[data-bg="black"]:not([data-theme="light"]) aside { box-shadow: 1px 0 0 #222224, 0 0 32px var(--drop, transparent); }
+html[data-bg="black"]:not([data-theme="light"]) nav { box-shadow: -1px 0 0 #222224, 0 0 32px var(--drop, transparent); }
+
+/* The corner buttons take the glass of the surfaces they float over: the usual button fill laid over the chrome colour at --glass-bg,
+   with the same backdrop filter. Where those variables are not defined (lite, flat) the fallbacks keep them opaque. */
+html[data-ui] .corner .btn {
+  background: linear-gradient(var(--fill), var(--fill)), color-mix(in srgb, var(--chrome) var(--glass-bg, 100%), transparent) !important;
+  -webkit-backdrop-filter: var(--glass-filter, none); backdrop-filter: var(--glass-filter, none);
+}
+html[data-ui] .corner .btn:hover:not(:disabled) { background: linear-gradient(var(--fill-hover), var(--fill-hover)), color-mix(in srgb, var(--chrome) var(--glass-bg, 100%), transparent) !important; }

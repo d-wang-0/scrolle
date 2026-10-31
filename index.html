@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+    <title>Scrolle</title>
+    <!-- A book is untrusted content: it may not load anything from the network, embed a page, or submit a form.
+         (Scripts and the fetch of a book by URL are left alone: the book's scripts are stripped by the compiler,
+         and opening an .epub by link needs the network.) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="img-src 'self' data: blob:; font-src 'self' data: blob:; style-src 'self' 'unsafe-inline' blob:; media-src 'self' data: blob:; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <!-- Before anything loads: the saved theme goes on <html> and the page is already its colour, so there is no white flash.
+         (Where an inline script is not allowed, as in the extension's pages, the CSS falls back to dark.) -->
+    <style>html { background: #000; } html[data-theme="light"] { background: #fff; }</style>
+    <script>
+      try { document.documentElement.dataset.theme = JSON.parse(localStorage.getItem("scrolle:settings") || "{}").theme === "light" ? "light" : "dark"; } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
