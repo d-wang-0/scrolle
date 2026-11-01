@@ -2,6 +2,7 @@
   import type { TocNode } from "../compiler/index.js";
   import { reader } from "./reader.svelte.js";
   import TocItem from "./TocItem.svelte";
+  import Icon from "./Icon.svelte";
 
   let {
     node,
@@ -63,7 +64,7 @@
   <div class="row" class:active={reader.active === node} style:padding-left="{0.3 + depth * 0.7}rem">
     {#if node.children.length}
       <button class="twisty" aria-label={open ? "Collapse" : "Expand"} aria-expanded={open} onclick={() => (open = !open)}>
-        {open ? "▾" : "▸"}
+        <Icon name={open ? "triangle-down" : "triangle-right"} size="0.6rem" />
       </button>
     {:else}
       <span class="twisty"></span>
@@ -99,7 +100,7 @@
   .row.active { background: var(--accent-soft); }
   .row.active .label { color: var(--fg); font-weight: 600; }
   button { font: inherit; background: none; border: 0; color: var(--fg-dim); cursor: pointer; padding: 0.15rem 0.25rem; }
-  .twisty { width: 1.1rem; flex: none; text-align: center; padding-inline: 0; }
+  .twisty { display: grid; place-items: center; width: 1.1rem; flex: none; text-align: center; padding-inline: 0; }
   .label { text-align: left; flex: 1; line-height: 1.25; }
   .label:hover:not(:disabled) { color: var(--fg); }
   .label:disabled { cursor: default; }

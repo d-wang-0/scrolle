@@ -1,10 +1,12 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import { Toggle, ToggleGroup } from "bits-ui";
+  import { Popover, Toggle, ToggleGroup } from "bits-ui";
   import { search } from "./search.svelte.js";
   import type { Group } from "./search.svelte.js";
+  import type { Hit } from "./search.js";
   import Resizer from "./Resizer.svelte";
-  import { settings, SIDEBAR_DEFAULTS } from "./settings.svelte.js";
+  import Icon from "./Icon.svelte";
+  import { settings, LIMITS, SIDEBAR_DEFAULTS } from "./settings.svelte.js";
   import { swipeClose } from "./swipe.js";
 
   let { open, onjump, onclose }: { open: boolean; onjump?: () => void; onclose?: () => void } = $props();
@@ -53,7 +55,36 @@
   }
 
   const isFolded = (id: number): boolean => folded[id] ?? search.total > 1000;
+
+  // Explicit entries override the "fold everything over 1000 hits" default, so this works for huge result sets too.
+  const anyOpen = $derived(search.groups.length > 0 && search.allGroups.some((g) => !isFolded(g.id)));
+  function toggleAll(): void {
+    const fold = anyOpen;
+    for (const g of search.allGroups) folded[g.id] = fold;
+  }
+
+  // Preview sizing: how many characters fit on a line is guessed once per width (not per hit),
+  // from the width of a sample string set in the hit font, so a match can sit about mid-preview.
+  const SAMPLE = "the quick brown fox jumps over the lazy dog ";
+  let resultsW = $state(0);
+  let sampleW = $state(0);
+  const charW = $derived(sampleW / SAMPLE.length);
+  const rem = typeof document === "undefined" ? 16 : parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+  /** Characters per line inside a hit at this group depth (list inset, hit padding and scrollbar taken off). */
+  const lineChars = (depth: number): number =>
+    charW > 0 ? Math.max(0, Math.floor((resultsW - (1.4 + depth * 0.7 + 0.4 + 0.8) * rem - 16) / charW)) : 0;
+
+  function context(hit: Hit, depth: number): { before: string; after: string } {
+    const total = lineChars(depth) * settings.previewLines;
+    const len = hit.match.length;
+    const lead = Math.max(0, Math.round((total - len) / 2));
+    // Some slack past the line end, since the estimate is rough; CSS clips the overflow.
+    return search.preview(hit, lead, Math.ceil((total - lead - len) * 1.2) + 12);
+  }
 </script>
+
+{#snippet preview(hit: Hit, depth: number)}{@const c = context(hit, depth)}{c.before}<mark>{hit.match}</mark>{c.after}{/snippet}
 
 <!-- One collapsible level of the results tree; headers pin below their ancestors' headers. -->
 {#snippet branch(group: Group)}
@@ -66,7 +97,7 @@
       aria-expanded={!isFolded(group.id)}
       onclick={() => (folded[group.id] = !isFolded(group.id))}
     >
-      <span class="twisty">{isFolded(group.id) ? "▸" : "▾"}</span>
+      <span class="twisty"><Icon name={isFolded(group.id) ? "triangle-right" : "triangle-down"} size="0.6rem" /></span>
       <span class="label">{group.label}</span>
       <span class="count">{group.count.toLocaleString()}</span>
     </button>
@@ -83,7 +114,9 @@
                   search.select(hit.n);
                   onjump?.();
                 }}
-                >{hit.before}<mark>{hit.match}</mark>{hit.after}</button
+                ><span class="text" class:one={settings.previewLines === 1} style:--lines={settings.previewLines}
+                  >{@render preview(hit, group.depth)}</span
+                ></button
               >
             </li>
           {/each}
@@ -108,8 +141,8 @@
         spellcheck="false"
         autocomplete="off"
       />
-      <button class="btn step" aria-label="Previous match" disabled={!search.total} onclick={() => search.step(-1)}>▲</button>
-      <button class="btn step" aria-label="Next match" disabled={!search.total} onclick={() => search.step(1)}>▼</button>
+      <button class="btn step" aria-label="Previous match" disabled={!search.total} onclick={() => search.step(-1)}><Icon name="triangle-up" size="0.7rem" /></button>
+      <button class="btn step" aria-label="Next match" disabled={!search.total} onclick={() => search.step(1)}><Icon name="triangle-down" size="0.7rem" /></button>
     </div>
     <div class="opts">
       <ToggleGroup.Root
@@ -120,25 +153,64 @@
         <ToggleGroup.Item value="contains">Contains</ToggleGroup.Item>
         <ToggleGroup.Item value="regex">Regex</ToggleGroup.Item>
       </ToggleGroup.Root>
-      <Toggle.Root class="btn case" aria-label="Case sensitive" title="Case sensitive" bind:pressed={settings.searchCase}>Aa</Toggle.Root>
+      <div class="tools">
+        <Toggle.Root class="btn-bare case" aria-label="Case sensitive" title="Case sensitive" bind:pressed={settings.searchCase}>Aa</Toggle.Root>
+        <Popover.Root>
+          <Popover.Trigger class="btn-bare gear" aria-label="Search settings" title="Search settings"><Icon name="settings" size="0.95rem" /></Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content class="popover" align="start" sideOffset={8} strategy="fixed">
+              <label class="field">
+                <span>Preview lines <output>{settings.previewLines}</output></span>
+                <input type="range" min={LIMITS.previewLines.min} max={LIMITS.previewLines.max} step="1" bind:value={settings.previewLines} />
+              </label>
+              <label class="field">
+                <span>Result position <output>{settings.hitOffset}%</output></span>
+                <input type="range" min={LIMITS.hitOffset.min} max={LIMITS.hitOffset.max} step="1" bind:value={settings.hitOffset} />
+              </label>
+              <label class="field">
+                <span>Scroll speed <output>{settings.glideMs ? `${settings.glideMs}ms` : "instant"}</output></span>
+                <input type="range" min={LIMITS.glideMs.min} max={LIMITS.glideMs.max} step="20" bind:value={settings.glideMs} />
+              </label>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
     </div>
-    <p class="status" class:error={search.error}>
-      {#if search.error}
-        {search.error}
-      {:else if search.busy}
-        Searching…
-      {:else if search.tooShort}
-        Type at least 2 characters
-      {:else if search.text && !search.total}
-        No results
-      {:else if search.total}
-        {search.current >= 0 ? `${search.current + 1} of ` : ""}{search.total.toLocaleString()} result{search.total === 1 ? "" : "s"}
-        in {search.sectionCount.toLocaleString()} section{search.sectionCount === 1 ? "" : "s"}
-      {/if}
-    </p>
+    <div class="statusrow">
+      <button
+        class="btn-bare foldall"
+        aria-label={anyOpen ? "Collapse all" : "Expand all"}
+        title={anyOpen ? "Collapse all" : "Expand all"}
+        hidden={!search.total}
+        onclick={toggleAll}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          {#if anyOpen}
+            <path d="m7 20 5-5 5 5M7 4l5 5 5-5" />
+          {:else}
+            <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
+          {/if}
+        </svg>
+      </button>
+      <p class="status" class:error={search.error}>
+        {#if search.error}
+          {search.error}
+        {:else if search.busy}
+          Searching…
+        {:else if search.tooShort}
+          Type at least 2 characters
+        {:else if search.text && !search.total}
+          No results
+        {:else if search.total}
+          {search.current >= 0 ? `${search.current + 1} of ` : ""}{search.total.toLocaleString()} result{search.total === 1 ? "" : "s"}
+          in {search.sectionCount.toLocaleString()} section{search.sectionCount === 1 ? "" : "s"}
+        {/if}
+      </p>
+    </div>
   </div>
 
-  <div class="results" bind:this={list}>
+  <div class="results" bind:this={list} bind:clientWidth={resultsW}>
+    <span class="sample" bind:clientWidth={sampleW} aria-hidden="true">{SAMPLE}</span>
     {#each search.groups as group (group.id)}
       {@render branch(group)}
     {/each}
@@ -170,18 +242,32 @@
   .step { flex: none; padding: 0.2rem 0.5rem; font-size: 0.7rem; }
   .step:disabled { opacity: 0.4; cursor: default; }
   /* Wraps onto two lines when the panel is dragged narrow. */
-  .opts { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: center; justify-content: space-between; font-size: 0.85rem; color: var(--fg-dim); }
+  /* Left edge flush with the search toggle above (a fixed corner button inset 0.5rem), not this panel's 0.6rem padding. */
+  .opts { margin-left: -0.1rem; display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: center; justify-content: space-between; font-size: 0.85rem; color: var(--fg-dim); }
   .opts :global(.seg) { flex: none; }
   /* About as tall as the checkbox label beside it. */
   .opts :global(.seg [data-toggle-group-item]) { padding: 0.05rem 0.7rem; font-size: 0.75rem; line-height: 1.2; }
   /* The case-sensitivity switch: a small toggle button reading Aa. */
-  .opts :global(.case) { flex: none; padding: 0.05rem 0.55rem; font-size: 0.75rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; color: var(--fg-dim); }
-  .opts :global(.case[data-state="on"]) { background: var(--accent); color: #fff; }
-  .status { margin: -0.1rem 0 -0.1rem; min-height: 1.2em; font-size: 0.72rem; line-height: 1.2; text-align: center; color: var(--fg-dim); }
+  .tools { display: flex; gap: 0.3rem; align-items: center; }
+  /* The two small option buttons are bare icons (.btn-bare): equal squares. */
+  .opts :global(:is(.gear, .case)) { flex: none; width: 1.4rem; height: 1.4rem; line-height: 1; }
+  .opts :global(.case) { font-size: 0.75rem; font-weight: 600; letter-spacing: -0.02em; }
+  /* With no fill, "on" is shown by the accent colour. */
+  .opts :global(.case[data-state="on"]) { color: var(--accent); }
+  /* The text stays centred in the panel; the fold-all icon sits in a matching column on the left. */
+  .statusrow { display: grid; grid-template-columns: 1.2rem 1fr 1.2rem; align-items: center; margin: -0.1rem 0 -0.1rem -0.1rem; }
+  /* Always the middle column, even when the fold-all button is hidden and no longer occupies the first. */
+  .status { grid-column: 2; margin: 0; min-height: 1.2em; font-size: 0.72rem; line-height: 1.2; text-align: center; color: var(--fg-dim); }
+  /* The chevrons have empty space around them in the icon box; pull the button left so the ink, not the box, lines up with the controls above. */
+  .foldall { grid-column: 1; width: 1.2rem; height: 1.2rem; margin-left: -0.3rem; }
+  .foldall[hidden] { display: none; }
+  .foldall svg { width: 0.85rem; height: 0.85rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  /* Measures how wide the hit font is, once per panel width (see lineChars). */
+  .sample { position: absolute; visibility: hidden; white-space: nowrap; pointer-events: none; font-size: 0.8rem; }
   .status.error { color: #ff6b6b; }
 
   /* No side padding, so group headers (and their highlight) span the full width; hits are inset by their list's padding. */
-  .results { flex: 1; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 0 0 0.5rem; }
+  .results { position: relative; flex: 1; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 0 0 0.5rem; }
   /* A little room above the first hit, so the selected hit's outline (which draws outside its box)
      doesn't run into the header it sits directly under. */
   ul { list-style: none; margin: 0; padding: 3px 0.4rem 0.15rem 0; }
@@ -197,10 +283,13 @@
     background: var(--chrome); color: var(--fg); font-weight: 600;
   }
   .group:hover { background: color-mix(in srgb, var(--accent) 18%, var(--chrome)); }
-  .twisty { width: 1.1rem; flex: none; text-align: center; font-weight: 400; color: var(--fg-dim); }
+  .twisty { display: grid; place-items: center; width: 1.1rem; flex: none; text-align: center; font-weight: 400; color: var(--fg-dim); }
   .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .count { font-weight: 400; font-size: 0.75rem; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
   .hit { display: block; width: 100%; padding: 0.12rem 0.4rem; border-radius: 4px; font-size: 0.8rem; line-height: 1.3; }
+  /* One line: clipped with an ellipsis. More: wrapped, clamped to the chosen number of lines. */
+  .text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines); line-clamp: var(--lines); overflow: hidden; overflow-wrap: anywhere; }
+  .text.one { display: block; white-space: nowrap; text-overflow: ellipsis; }
   .hit:hover { background: var(--accent-soft); }
   .hit.current { background: var(--accent-soft); outline: 1px solid var(--accent); }
   mark { background: none; color: var(--fg); font-weight: 700; }

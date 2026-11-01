@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
   import BookView from "./BookView.svelte";
+  import Icon from "./Icon.svelte";
   import { canFullscreen, inExtension, initNative, isMobileApp, onBackButton, onFullscreenChange, setStatusBar, setWindowTitle, toggleFullscreen } from "./native.js";
   import Toc from "./Toc.svelte";
   import Menu from "./Menu.svelte";
@@ -194,7 +195,7 @@
 </div>
 <div class="corner right">
   {#if reader.book}
-    <button class="btn" aria-label="Table of contents" aria-pressed={tocOpen} onclick={toggleToc}>☰</button>
+    <button class="btn" aria-label="Table of contents" aria-pressed={tocOpen} onclick={toggleToc}><Icon name="menu" size="1.15rem" /></button>
     {#if canFullscreen()}
       <button class="btn" aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"} title={fullscreen ? "Exit fullscreen (F11)" : "Fullscreen (F11)"} onclick={() => void toggleFullscreen()}>
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

@@ -229,9 +229,35 @@ class SearchState {
     scrollToY(Math.max(0, rect.top + window.scrollY - vh * settings.hitOffset / 100), first, near);
   }
 
+  /** Index of the first hit not above the top of the viewport (the hit count if all are). */
+  private firstInView(): number {
+    let lo = 0;
+    let hi = this.ranges.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (this.ranges[mid]!.getBoundingClientRect().top < 0) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  /** Step from the selected hit; with none selected, from the viewport (wrapping at the ends). */
   step(dir: 1 | -1): void {
-    if (!this.total) return;
-    this.select(this.current < 0 ? (dir > 0 ? 0 : this.total - 1) : (this.current + dir + this.total) % this.total);
+    const n = this.total;
+    if (!n) return;
+    if (this.current >= 0) return this.select((this.current + dir + n) % n);
+    const first = this.firstInView();
+    this.select(dir > 0 ? first % n : (first - 1 + n) % n);
+  }
+
+  /** Context around a hit for the results list; empty until a search has built the index. */
+  preview(h: Hit, lead: number, rest: number): { before: string; after: string } {
+    return this.index?.preview(h, lead, rest) ?? { before: "", after: "" };
+  }
+
+  /** Every group in the results tree, in document order. */
+  get allGroups(): Group[] {
+    return this.all;
   }
 }
 

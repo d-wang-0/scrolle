@@ -14,6 +14,8 @@ export interface Settings {
   hitOffset: number;
   /** Duration of the glide to a nearby search result, in ms (0 jumps instantly). */
   glideMs: number;
+  /** Lines of book text shown for each search result. */
+  previewLines: number;
   /** Sidebar widths, in px. */
   tocWidth: number;
   searchWidth: number;
@@ -28,13 +30,14 @@ export const LIMITS = {
   width: { min: 28, max: 72 },
   hitOffset: { min: 0, max: 50 },
   glideMs: { min: 0, max: 600 },
+  previewLines: { min: 1, max: 5 },
 } as const;
 
 const KEY = "scrolle:settings";
 export const SIDEBAR_DEFAULTS = { toc: 352, search: 416 } as const;
 const defaults: Settings = {
   theme: "dark", fontSize: 20, width: 42, invertImages: "bw", searchMode: "contains", searchCase: false,
-  hitOffset: 8, glideMs: 220,
+  hitOffset: 8, glideMs: 220, previewLines: 1,
   tocWidth: SIDEBAR_DEFAULTS.toc, searchWidth: SIDEBAR_DEFAULTS.search,
   tocOpen: false, searchOpen: false,
 };
@@ -54,6 +57,7 @@ function load(): Settings {
       searchCase: raw.searchCase === true,
       hitOffset: clamp(raw.hitOffset, LIMITS.hitOffset, defaults.hitOffset),
       glideMs: clamp(raw.glideMs, LIMITS.glideMs, defaults.glideMs),
+      previewLines: Math.round(clamp(raw.previewLines, LIMITS.previewLines, defaults.previewLines)),
       tocWidth: clamp(raw.tocWidth, LIMITS.sidebar, defaults.tocWidth),
       searchWidth: clamp(raw.searchWidth, LIMITS.sidebar, defaults.searchWidth),
       tocOpen: raw.tocOpen === true,

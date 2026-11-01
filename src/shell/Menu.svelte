@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Popover, ToggleGroup } from "bits-ui";
   import { reader } from "./reader.svelte.js";
+  import Icon from "./Icon.svelte";
   import { settings, resetSettings, LIMITS } from "./settings.svelte.js";
 
   let { open = $bindable(false), onopenfile, onaddfile }: { open?: boolean; onopenfile: () => void; onaddfile: () => void } = $props();
@@ -17,7 +18,7 @@
 </script>
 
 <Popover.Root bind:open>
-  <Popover.Trigger class="btn" aria-label="Menu">⚙</Popover.Trigger>
+  <Popover.Trigger class="btn" aria-label="Menu"><Icon name="settings" size="1.1rem" /></Popover.Trigger>
   <Popover.Portal>
     <Popover.Content class="popover" align="end" sideOffset={8} strategy="fixed">
       <div class="actions-col">
@@ -64,14 +65,6 @@
       <label class="field">
         <span>Column width <output>{settings.width}rem</output></span>
         <input type="range" min={LIMITS.width.min} max={LIMITS.width.max} step="1" bind:value={settings.width} />
-      </label>
-      <label class="field">
-        <span>Search result position <output>{settings.hitOffset}%</output></span>
-        <input type="range" min={LIMITS.hitOffset.min} max={LIMITS.hitOffset.max} step="1" bind:value={settings.hitOffset} />
-      </label>
-      <label class="field">
-        <span>Search scroll speed <output>{settings.glideMs ? `${settings.glideMs}ms` : "instant"}</output></span>
-        <input type="range" min={LIMITS.glideMs.min} max={LIMITS.glideMs.max} step="20" bind:value={settings.glideMs} />
       </label>
       <button class="btn small" onclick={resetSettings}>Reset to defaults</button>
     </Popover.Content>

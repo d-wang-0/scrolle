@@ -32,6 +32,9 @@ body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: var(--page);
 .btn:hover { background: var(--accent-soft); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.small { font-size: 0.8rem; justify-self: start; }
+/* A bare icon button: no fill, border or shadow; hover only brightens the icon. Deliberately not a .btn, so no UI variant (they all restyle .btn) reaches it. Give it a size. */
+.btn-bare { display: grid; place-items: center; padding: 0; border: 0; background: none; font: inherit; color: var(--fg-dim); cursor: pointer; transition: color 0.12s; }
+.btn-bare:hover:not(:disabled), .btn-bare:focus-visible { color: var(--fg); }
 
 /* Floating controls in the top corners (no full-width bar). */
 .corner {

@@ -31,8 +31,17 @@ describe("BookIndex.search", () => {
       [0, 0, 23, 27, "dark", "One"],
       [1, 1, 52, 56, "dark", "Two"],
     ]);
-    expect(hits[0]!.before).toBe("Chapter One It was a ");
-    expect(hits[0]!.after).toBe(" and stormy night. Café au lait, naïve.");
+  });
+
+  it("previews context around a hit, cutting at word boundaries", async () => {
+    const hits = (await index.search(contains("dark"), never))!;
+    expect(index.preview(hits[0]!, 60, 60)).toEqual({
+      before: "Chapter One It was a ",
+      after: " and stormy night. Café au lait, naïve.",
+    });
+    // A short lead cuts to a whole word and marks the cut.
+    expect(index.preview(hits[0]!, 8, 10)).toEqual({ before: "…was a ", after: " and storm" });
+    expect(index.preview(hits[0]!, 0, 0)).toEqual({ before: "", after: "" });
   });
 
   it("matches across inline tags, ignoring whitespace runs, case and accents", async () => {

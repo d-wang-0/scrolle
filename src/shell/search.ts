@@ -21,17 +21,14 @@ export interface Hit {
   /** Offsets into the section's flattened text. */
   start: number;
   end: number;
-  before: string;
   match: string;
-  after: string;
   /** Deepest TOC entry at or before the match, if any. */
   toc: TocNode | null;
   /** Index of the result group this hit was filed under. */
   g: number;
 }
 
-/** Characters of context shown on each side of a match. */
-const CONTEXT = 60;
+/** Longest match shown in a preview. Context around it is cut on demand (`BookIndex.preview`), not stored per hit. */
 const MAX_PREVIEW = 160;
 
 /** Text normalised for "Contains" matching, with each character's span in the original. */
@@ -171,15 +168,25 @@ export class BookIndex {
     const text = this.sections[section]!.text;
     let match = flat(text.slice(start, end));
     if (match.length > MAX_PREVIEW) match = match.slice(0, MAX_PREVIEW) + "…";
-    const before = flat(text.slice(Math.max(0, start - CONTEXT), start)).trimStart();
-    const after = flat(text.slice(end, end + CONTEXT)).trimEnd();
-    return {
-      n, section, start, end, match,
-      before: (start > CONTEXT ? "…" : "") + before,
-      after: after + (end + CONTEXT < text.length ? "…" : ""),
-      toc: this.tocFor(section, start),
-      g: 0,
-    };
+    return { n, section, start, end, match, toc: this.tocFor(section, start), g: 0 };
+  }
+
+  /** Text around a hit: about `lead` characters before it and `rest` after, whitespace folded.
+   *  A cut start lands on a word boundary and gets an ellipsis; the end is left for CSS to clip. */
+  preview(h: Hit, lead: number, rest: number): { before: string; after: string } {
+    const text = this.sections[h.section]!.text;
+    const from = Math.max(0, h.start - lead * 2 - 8);
+    let before = flat(text.slice(from, h.start));
+    if (from === 0) before = before.trimStart();
+    if (lead <= 0) before = "";
+    else if (from > 0 || before.length > lead) {
+      before = before.slice(-lead);
+      const sp = before.indexOf(" ");
+      if (sp >= 0 && sp < before.length - 1) before = before.slice(sp + 1);
+      before = "…" + before;
+    }
+    const after = flat(text.slice(h.end, h.end + Math.max(0, rest) * 2)).trimEnd();
+    return { before, after: after.slice(0, Math.max(0, rest)) };
   }
 
   /** All matches in document order, or null if `cancelled()` turned true midway. Throws on a bad regex. */

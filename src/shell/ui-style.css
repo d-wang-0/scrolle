@@ -64,10 +64,6 @@ html[data-ui] .seg [data-toggle-group-item] { border-radius: 5px; color: var(--f
 html[data-ui] .seg [data-toggle-group-item]:hover:not([data-state="on"]) { color: var(--fg); background: var(--fill); }
 html[data-ui] .seg [data-toggle-group-item][data-state="on"] { background: var(--accent); color: #fff; }
 
-/* The Aa case toggle: a quiet button when off, accent when on (a real toggle needs a visible on state). */
-html[data-ui] .btn.case { background: var(--fill); }
-html[data-ui] .btn.case[data-state="on"] { background: var(--accent) !important; color: #fff; }
-
 /* Search hits: hover is a soft blue, the selected one a slightly darker blue. No outline, no bar. */
 html[data-ui] .hit:hover { background: var(--hover-hit); }
 html[data-ui] .hit.current, html[data-ui] .hit.current:hover { outline: 0; box-shadow: none; background: var(--sel-hit); }
