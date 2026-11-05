@@ -1,9 +1,3 @@
-<script lang="ts" module>
-  /** Whether each image (by blob URL) is greyscale. A book's URLs survive
-   *  recompiles (append/reorder), so its images are checked once. */
-  const greyByUrl = new Map<string, boolean>();
-</script>
-
 <script lang="ts">
   import { onMount } from "svelte";
   import type { CompileResult, TocNode } from "../compiler/index.js";
@@ -11,9 +5,11 @@
   import { settings } from "./settings.svelte.js";
   import { search } from "./search.svelte.js";
   import { loadPosition, savePosition } from "./position.js";
+  import { lastAtOrBefore } from "./bsearch.js";
   import { buildNoteIndex } from "./footnotes.js";
   import type { Note } from "./footnotes.js";
   import Footnote from "./Footnote.svelte";
+  import { tagGreyImages } from "./greyImages.js";
   import { measureLength, pageCount, CHARS_PER_PAGE } from "./length.js";
   import type { BookLength } from "./length.js";
 
@@ -33,40 +29,8 @@
     bookEl?.classList.toggle("invert-all", mode === "all");
     bookEl?.classList.toggle("invert-bw", mode === "bw");
     if (mode !== "bw" || !bookEl) return;
-    const imgs = bookEl.querySelectorAll("img");
-    const onLoad = (e: Event) => tagGrayscale(e.currentTarget as HTMLImageElement);
-    for (const img of imgs) {
-      const known = greyByUrl.get(img.currentSrc || img.src);
-      if (known !== undefined) img.dataset[known ? "bw" : "colour"] = "";
-      else if (img.complete && img.naturalWidth) tagGrayscale(img);
-      else img.addEventListener("load", onLoad, { once: true });
-    }
-    return () => imgs.forEach((img) => img.removeEventListener("load", onLoad));
+    return tagGreyImages(bookEl);
   });
-
-  /** Mark an image `data-bw` if (nearly) all its pixels are grey. */
-  function tagGrayscale(img: HTMLImageElement): void {
-    if (img.dataset.bw !== undefined || img.dataset.colour !== undefined) return;
-    const SIZE = 48;
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = SIZE;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-    try {
-      ctx.drawImage(img, 0, 0, SIZE, SIZE);
-      const px = ctx.getImageData(0, 0, SIZE, SIZE).data;
-      let coloured = 0;
-      for (let i = 0; i < px.length; i += 4) {
-        if (px[i + 3]! < 16) continue;
-        if (Math.max(px[i]!, px[i + 1]!, px[i + 2]!) - Math.min(px[i]!, px[i + 1]!, px[i + 2]!) > 24) coloured++;
-      }
-      const grey = coloured / (SIZE * SIZE) < 0.02;
-      img.dataset[grey ? "bw" : "colour"] = "";
-      greyByUrl.set(img.currentSrc || img.src, grey);
-    } catch {
-      // Tainted or undecodable image: leave it alone.
-    }
-  }
 
   // Section and TOC-target tops (document Y), cached because layout changes
   // (images loading, resizes, font-size changes) are rarer than scroll events.
@@ -111,17 +75,18 @@
 
   /** Index of the last section whose top is at or above `y`. */
   function sectionAt(y: number): number {
-    let lo = 0;
-    let hi = sectionTops.length - 1;
-    let found = 0;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      if (sectionTops[mid]! <= y) {
-        found = mid;
-        lo = mid + 1;
-      } else hi = mid - 1;
-    }
-    return found;
+    return Math.max(0, lastAtOrBefore(sectionTops.length, (i) => sectionTops[i]!, y));
+  }
+
+  /** Where the document ends, or where section `i` does. */
+  const sectionEnd = (i: number): number => sectionTops[i + 1] ?? document.documentElement.scrollHeight;
+
+  /** The section at the viewport top `y`, and how far through it that is (0 to 1). */
+  function placeAt(y: number): { i: number; f: number } {
+    const i = sectionAt(y + 4);
+    const top = sectionTops[i]!;
+    const end = sectionEnd(i);
+    return { i, f: end > top ? Math.min(1, Math.max(0, (y - top) / (end - top))) : 0 };
   }
 
   // Until the reader scrolls themselves, keep re-applying the restored
@@ -134,8 +99,7 @@
     const i = sections.findIndex((s) => s.id === restore.id);
     if (i < 0) return;
     const top = sectionTops[i]!;
-    const end = sectionTops[i + 1] ?? document.documentElement.scrollHeight;
-    window.scrollTo({ top: top + restore.f * (end - top), behavior: "instant" });
+    window.scrollTo({ top: top + restore.f * (sectionEnd(i) - top), behavior: "instant" });
   }
 
   let frame = 0;
@@ -150,35 +114,20 @@
     // Current page: characters before the viewport top (whole sections, plus the fraction
     // of this one scrolled past) over the page size.
     if (sections.length && length.total) {
-      const i = sectionAt(y + 4);
-      const top = sectionTops[i]!;
-      const end = sectionTops[i + 1] ?? document.documentElement.scrollHeight;
-      const f = end > top ? Math.min(1, Math.max(0, (y - top) / (end - top))) : 0;
+      const { i, f } = placeAt(y);
       const offset = charStarts[i]! + f * length.chars[i]!;
       reader.page = Math.min(reader.pages, Math.floor(offset / CHARS_PER_PAGE) + 1);
     }
 
     // Active TOC entry: the one whose target is closest above the viewport top.
     const line = y + 4;
-    let lo = 0;
-    let hi = tocByTop.length - 1;
-    let best = -1;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      if (tocTops[tocByTop[mid]!]! <= line) {
-        best = tocByTop[mid]!;
-        lo = mid + 1;
-      } else hi = mid - 1;
-    }
-    reader.active = best >= 0 ? tocNodes[best]! : null;
+    const best = lastAtOrBefore(tocByTop.length, (i) => tocTops[tocByTop[i]!]!, line);
+    reader.active = best >= 0 ? tocNodes[tocByTop[best]!]! : null;
 
     if (!settling && sections.length) {
       clearTimeout(saveTimer);
       saveTimer = window.setTimeout(() => {
-        const i = sectionAt(window.scrollY + 4);
-        const top = sectionTops[i]!;
-        const end = sectionTops[i + 1] ?? document.documentElement.scrollHeight;
-        const f = end > top ? Math.max(0, (window.scrollY - top) / (end - top)) : 0;
+        const { i, f } = placeAt(window.scrollY);
         savePosition(reader.key, { id: sections[i]!.id, f });
       }, 400);
     }

@@ -2,9 +2,11 @@
 // highlighting in the book. The index is built lazily on the first query.
 
 import type { TocNode } from "../compiler/index.js";
+import { firstWhere } from "./bsearch.js";
 import { setHighlight } from "./highlights.js";
 import { anchorTarget, scrollToY } from "./reader.svelte.js";
 import { settings } from "./settings.svelte.js";
+import { caretAt } from "./textindex.js";
 import { BookIndex } from "./search.js";
 import type { Hit } from "./search.js";
 
@@ -45,9 +47,14 @@ class SearchState {
   /** Selected hit, or -1. */
   current = $state(-1);
 
+  /** Which groups the results list shows folded, by group id. A group not in here follows the default: folded when there are very many hits. */
+  private folded = $state<Record<number, boolean | undefined>>({});
+
   private source: { sections: HTMLElement[]; toc: TocNode[] } | null = null;
   private parents = new Map<TocNode, TocNode | null>();
   private all: Group[] = [];
+  /** Whether any group is open, so the fold-all button knows which way it goes. */
+  anyOpen = $derived(this.groups.length > 0 && this.all.some((g) => !this.isFolded(g.id)));
   private index: BookIndex | null = null;
   private hits: Hit[] = [];
   private ranges: Range[] = [];
@@ -82,12 +89,18 @@ class SearchState {
     this.clear();
   }
 
-  hitAt(n: number): Hit | undefined {
-    return this.hits[n];
+  isFolded(id: number): boolean {
+    return this.folded[id] ?? this.total > 1000;
   }
 
-  groupAt(id: number): Group | undefined {
-    return this.all[id];
+  setFolded(id: number, folded: boolean): void {
+    this.folded[id] = folded;
+  }
+
+  /** Fold every group, or unfold them all when everything is already folded. */
+  toggleAll(): void {
+    const fold = this.anyOpen;
+    for (const g of this.all) this.folded[g.id] = fold;
   }
 
   async run(): Promise<void> {
@@ -158,6 +171,7 @@ class SearchState {
     this.ys = [];
     this.groups = [];
     this.all = [];
+    this.folded = {};
     this.sectionCount = 0;
     this.total = 0;
     this.current = -1;
@@ -187,22 +201,14 @@ class SearchState {
   /** Select the hit under a click in the book, without scrolling. */
   pick(x: number, y: number): void {
     if (!this.active) return;
-    let node: Node | null = null;
-    let off = 0;
-    if (document.caretPositionFromPoint) {
-      const p = document.caretPositionFromPoint(x, y);
-      if (p) ({ offsetNode: node, offset: off } = p);
-    } else {
-      const r = document.caretRangeFromPoint?.(x, y);
-      if (r) ({ startContainer: node, startOffset: off } = r);
-    }
-    if (!node) return;
+    const caret = caretAt(x, y);
+    if (!caret) return;
     // Ranges are in document order, so binary-search for the one containing the point.
     let lo = 0;
     let hi = this.ranges.length - 1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      const side = this.ranges[mid]!.comparePoint(node, off);
+      const side = this.ranges[mid]!.comparePoint(caret.node, caret.offset);
       if (side === 0) {
         this.select(mid, false);
         return;
@@ -217,6 +223,7 @@ class SearchState {
     if (!range) return;
     // Only the first jump of a search becomes a history entry, so Back returns to where the reader was.
     const first = this.current < 0;
+    if (n !== this.current) this.unfold(n);
     this.current = n;
     this.selected = range;
     this.apply();
@@ -229,16 +236,14 @@ class SearchState {
     scrollToY(Math.max(0, rect.top + window.scrollY - vh * settings.hitOffset / 100), first, near);
   }
 
+  /** Open the groups around a hit, so it can be seen. */
+  private unfold(n: number): void {
+    for (let g: Group | null | undefined = this.all[this.hits[n]!.g]; g; g = g.parent) this.folded[g.id] = false;
+  }
+
   /** Index of the first hit not above the top of the viewport (the hit count if all are). */
   private firstInView(): number {
-    let lo = 0;
-    let hi = this.ranges.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (this.ranges[mid]!.getBoundingClientRect().top < 0) lo = mid + 1;
-      else hi = mid;
-    }
-    return lo;
+    return firstWhere(this.ranges.length, (i) => !(this.ranges[i]!.getBoundingClientRect().top < 0));
   }
 
   /** Step from the selected hit; with none selected, from the viewport (wrapping at the ends). */
@@ -253,11 +258,6 @@ class SearchState {
   /** Context around a hit for the results list; empty until a search has built the index. */
   preview(h: Hit, lead: number, rest: number): { before: string; after: string } {
     return this.index?.preview(h, lead, rest) ?? { before: "", after: "" };
-  }
-
-  /** Every group in the results tree, in document order. */
-  get allGroups(): Group[] {
-    return this.all;
   }
 }
 

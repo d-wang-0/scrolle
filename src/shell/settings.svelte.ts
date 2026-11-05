@@ -1,5 +1,7 @@
 // User-adjustable reading settings, persisted in localStorage.
 
+import { readJson, writeJson } from "./storage.js";
+
 export interface Settings {
   theme: "dark" | "light";
   /** Base font size of the book, in px. */
@@ -46,26 +48,22 @@ const clamp = (n: unknown, { min, max }: { min: number; max: number }, fallback:
   typeof n === "number" && Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 
 function load(): Settings {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<Settings>;
-    return {
-      theme: raw.theme === "light" ? "light" : "dark",
-      fontSize: clamp(raw.fontSize, LIMITS.fontSize, defaults.fontSize),
-      width: clamp(raw.width, LIMITS.width, defaults.width),
-      invertImages: raw.invertImages === "off" || raw.invertImages === "bw" || raw.invertImages === "all" ? raw.invertImages : defaults.invertImages,
-      searchMode: raw.searchMode === "regex" ? "regex" : "contains",
-      searchCase: raw.searchCase === true,
-      hitOffset: clamp(raw.hitOffset, LIMITS.hitOffset, defaults.hitOffset),
-      glideMs: clamp(raw.glideMs, LIMITS.glideMs, defaults.glideMs),
-      previewLines: Math.round(clamp(raw.previewLines, LIMITS.previewLines, defaults.previewLines)),
-      tocWidth: clamp(raw.tocWidth, LIMITS.sidebar, defaults.tocWidth),
-      searchWidth: clamp(raw.searchWidth, LIMITS.sidebar, defaults.searchWidth),
-      tocOpen: raw.tocOpen === true,
-      searchOpen: raw.searchOpen === true,
-    };
-  } catch {
-    return { ...defaults };
-  }
+  const raw = readJson<Partial<Settings>>(KEY) ?? {};
+  return {
+    theme: raw.theme === "light" ? "light" : "dark",
+    fontSize: clamp(raw.fontSize, LIMITS.fontSize, defaults.fontSize),
+    width: clamp(raw.width, LIMITS.width, defaults.width),
+    invertImages: raw.invertImages === "off" || raw.invertImages === "bw" || raw.invertImages === "all" ? raw.invertImages : defaults.invertImages,
+    searchMode: raw.searchMode === "regex" ? "regex" : "contains",
+    searchCase: raw.searchCase === true,
+    hitOffset: clamp(raw.hitOffset, LIMITS.hitOffset, defaults.hitOffset),
+    glideMs: clamp(raw.glideMs, LIMITS.glideMs, defaults.glideMs),
+    previewLines: Math.round(clamp(raw.previewLines, LIMITS.previewLines, defaults.previewLines)),
+    tocWidth: clamp(raw.tocWidth, LIMITS.sidebar, defaults.tocWidth),
+    searchWidth: clamp(raw.searchWidth, LIMITS.sidebar, defaults.searchWidth),
+    tocOpen: raw.tocOpen === true,
+    searchOpen: raw.searchOpen === true,
+  };
 }
 
 export const settings = $state<Settings>(load());
@@ -76,10 +74,5 @@ export function resetSettings(): void {
 
 /** Call from a component effect: re-runs (and saves) whenever a setting changes. */
 export function persistSettings(): void {
-  const json = JSON.stringify(settings);
-  try {
-    localStorage.setItem(KEY, json);
-  } catch {
-    // Storage unavailable (private mode, quota); settings just won't persist.
-  }
+  writeJson(KEY, settings);
 }

@@ -9,21 +9,15 @@ export interface Position {
   f: number;
 }
 
+import { readJson, writeJson } from "./storage.js";
+
 const prefix = "scrolle:pos:";
 
 export function loadPosition(key: string): Position | null {
-  try {
-    const p = JSON.parse(localStorage.getItem(prefix + key) ?? "null") as Position | null;
-    return p && typeof p.id === "string" && typeof p.f === "number" ? p : null;
-  } catch {
-    return null;
-  }
+  const p = readJson<Position>(prefix + key);
+  return p && typeof p.id === "string" && typeof p.f === "number" ? p : null;
 }
 
 export function savePosition(key: string, pos: Position): void {
-  try {
-    localStorage.setItem(prefix + key, JSON.stringify(pos));
-  } catch {
-    // Storage unavailable; position just won't persist.
-  }
+  writeJson(prefix + key, pos);
 }

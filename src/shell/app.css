@@ -81,12 +81,12 @@ html[data-chrome="hidden"] :is(.corner, .foot, .track) { opacity: 0; pointer-eve
 /* Layout: the sidebars are fixed panels (search left, contents right), but a spacer of
    the same width (--left-w / --right-w, 0 when closed) reserves their room, so <main>
    is exactly the space left over. */
-.layout { display: flex; --left-w: 0px; --right-w: 0px; }
+.layout { display: flex; --left-w: var(--left-open, 0px); --right-w: var(--right-open, 0px); }
 .layout > .spacer.left { flex: none; width: var(--left-w); }
 .layout > .spacer.right { flex: none; width: var(--right-w); }
 .layout > main { flex: 1; min-width: 0; }
 /* On narrow windows the sidebars overlay the book instead of squeezing it. */
-@media (max-width: 640px) { .layout { --left-w: 0px !important; --right-w: 0px !important; } }
+@media (max-width: 640px) { .layout { --left-w: 0px; --right-w: 0px; } }
 
 /* Reading column */
 main { padding-top: var(--bar-h); }
@@ -168,7 +168,12 @@ main.empty progress { width: min(20rem, 80vw); accent-color: var(--accent); }
 .popover hr { width: 100%; margin: 0; border: 0; border-top: 1px solid var(--line); }
 .popover .field { display: grid; gap: 0.35rem; font-size: 0.85rem; color: var(--fg-dim); }
 .popover output { float: right; color: var(--fg); }
-.popover input[type="range"] { width: 100%; accent-color: var(--accent); }
+/* Sliders (Slider.svelte, a Bits UI slider): a track, the filled part up to the value, and a round knob. */
+.slider { position: relative; display: block; width: 100%; height: 18px; cursor: pointer; user-select: none; }
+.slider-track { position: absolute; left: 0; right: 0; top: 6px; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.slider-range { height: 100%; background: var(--accent); }
+.slider-thumb { top: 1px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
+.slider-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .seg [data-toggle-group-item] { font: inherit; border: 0; background: none; color: var(--fg); padding: 0.4rem; cursor: pointer; }
 .seg [data-toggle-group-item][data-state="on"] { background: var(--accent); color: #fff; }

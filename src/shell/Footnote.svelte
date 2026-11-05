@@ -103,7 +103,7 @@
   .note.above::before { bottom: -7px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .body { overflow-y: auto; padding: 0.75rem 1rem; font-size: calc(var(--book-font) * 0.85); overscroll-behavior: contain; }
   /* The note keeps its book styling; only the box itself follows the shell theme. */
-  .body :global(.epub-book) { background: transparent !important; max-width: none; margin: 0; padding: 0; }
+  .body :global(.epub-book) { background: transparent; max-width: none; margin: 0; padding: 0; }
   .body :global(.epub-book > section) { margin: 0; }
   .body :global(img) { max-width: 100%; height: auto; }
   .actions { display: flex; gap: 0.5rem; justify-content: flex-end; padding: 0.4rem 0.75rem; border-top: 1px solid var(--line); }

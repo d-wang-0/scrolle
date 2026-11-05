@@ -4,10 +4,10 @@
   import { search } from "./search.svelte.js";
   import type { Group } from "./search.svelte.js";
   import type { Hit } from "./search.js";
-  import Resizer from "./Resizer.svelte";
+  import Sidebar from "./Sidebar.svelte";
   import Icon from "./Icon.svelte";
+  import Slider from "./Slider.svelte";
   import { settings, LIMITS, SIDEBAR_DEFAULTS } from "./settings.svelte.js";
-  import { swipeClose } from "./swipe.js";
 
   let { open, onjump, onclose }: { open: boolean; onjump?: () => void; onclose?: () => void } = $props();
   let input: HTMLInputElement;
@@ -15,7 +15,6 @@
   /** Pinned-header step in px; nested headers pin at multiples of it. Whole pixels,
    *  so stacked headers never leave a sub-pixel seam (see `.group` in the styles). */
   const HEADER_H = 26;
-  let folded = $state<Record<number, boolean | undefined>>({});
 
   export function focus(): void {
     input.focus();
@@ -27,23 +26,16 @@
     search.showHighlights(open);
   });
 
-  // Re-run shortly after the query or its options change.
+  // Debounced, so typing does not search per keystroke.
   $effect(() => {
     void [search.text, settings.searchMode, settings.searchCase];
     const t = setTimeout(() => void search.run(), 180);
     return () => clearTimeout(t);
   });
 
+  // Keep the selected hit visible (its groups are unfolded by `search.select`).
   $effect(() => {
-    void search.groups;
-    folded = {};
-  });
-
-  // Keep the selected hit visible, unfolding its group if needed.
-  $effect(() => {
-    const h = search.hitAt(search.current);
-    if (!h) return;
-    for (let g = search.groupAt(h.g); g; g = g.parent) folded[g.id] = false;
+    if (search.current < 0) return;
     void tick().then(() => list.querySelector(".hit.current")?.scrollIntoView({ block: "nearest" }));
   });
 
@@ -52,15 +44,6 @@
       e.preventDefault();
       search.step(e.shiftKey ? -1 : 1);
     }
-  }
-
-  const isFolded = (id: number): boolean => folded[id] ?? search.total > 1000;
-
-  // Explicit entries override the "fold everything over 1000 hits" default, so this works for huge result sets too.
-  const anyOpen = $derived(search.groups.length > 0 && search.allGroups.some((g) => !isFolded(g.id)));
-  function toggleAll(): void {
-    const fold = anyOpen;
-    for (const g of search.allGroups) folded[g.id] = fold;
   }
 
   // Preview sizing: how many characters fit on a line is guessed once per width (not per hit),
@@ -94,14 +77,14 @@
       style:top="{group.depth * HEADER_H}px"
       style:z-index={100 - group.depth}
       style:padding-left="{0.4 + group.depth * 0.7}rem"
-      aria-expanded={!isFolded(group.id)}
-      onclick={() => (folded[group.id] = !isFolded(group.id))}
+      aria-expanded={!search.isFolded(group.id)}
+      onclick={() => search.setFolded(group.id, !search.isFolded(group.id))}
     >
-      <span class="twisty"><Icon name={isFolded(group.id) ? "triangle-right" : "triangle-down"} size="0.6rem" /></span>
+      <span class="twisty"><Icon name={search.isFolded(group.id) ? "triangle-right" : "triangle-down"} size="0.6rem" /></span>
       <span class="label">{group.label}</span>
       <span class="count">{group.count.toLocaleString()}</span>
     </button>
-    {#if !isFolded(group.id)}
+    {#if !search.isFolded(group.id)}
       {#if group.hits.length}
         <ul style:padding-left="{1.4 + group.depth * 0.7}rem">
           {#each group.hits as hit (hit.n)}
@@ -129,7 +112,7 @@
   </section>
 {/snippet}
 
-<aside use:swipeClose={{ dir: -1, onclose: () => onclose?.() }} class:open style:width="min({settings.searchWidth}px, 90vw)" style:--hdr="{HEADER_H}px" aria-label="Search">
+<Sidebar side="left" {open} bind:width={settings.searchWidth} fallback={SIDEBAR_DEFAULTS.search} label="Search" {onclose} class="search" style="--hdr: {HEADER_H}px">
   <div class="head">
     <div class="query">
       <input
@@ -159,18 +142,18 @@
           <Popover.Trigger class="btn-bare gear" aria-label="Search settings" title="Search settings"><Icon name="settings" size="0.95rem" /></Popover.Trigger>
           <Popover.Portal>
             <Popover.Content class="popover" align="start" sideOffset={8} strategy="fixed">
-              <label class="field">
+              <div class="field">
                 <span>Preview lines <output>{settings.previewLines}</output></span>
-                <input type="range" min={LIMITS.previewLines.min} max={LIMITS.previewLines.max} step="1" bind:value={settings.previewLines} />
-              </label>
-              <label class="field">
+                <Slider min={LIMITS.previewLines.min} max={LIMITS.previewLines.max} label="Preview lines" bind:value={settings.previewLines} />
+              </div>
+              <div class="field">
                 <span>Result position <output>{settings.hitOffset}%</output></span>
-                <input type="range" min={LIMITS.hitOffset.min} max={LIMITS.hitOffset.max} step="1" bind:value={settings.hitOffset} />
-              </label>
-              <label class="field">
+                <Slider min={LIMITS.hitOffset.min} max={LIMITS.hitOffset.max} label="Result position" bind:value={settings.hitOffset} />
+              </div>
+              <div class="field">
                 <span>Scroll speed <output>{settings.glideMs ? `${settings.glideMs}ms` : "instant"}</output></span>
-                <input type="range" min={LIMITS.glideMs.min} max={LIMITS.glideMs.max} step="20" bind:value={settings.glideMs} />
-              </label>
+                <Slider min={LIMITS.glideMs.min} max={LIMITS.glideMs.max} step={20} label="Scroll speed" bind:value={settings.glideMs} />
+              </div>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
@@ -179,18 +162,12 @@
     <div class="statusrow">
       <button
         class="btn-bare foldall"
-        aria-label={anyOpen ? "Collapse all" : "Expand all"}
-        title={anyOpen ? "Collapse all" : "Expand all"}
+        aria-label={search.anyOpen ? "Collapse all" : "Expand all"}
+        title={search.anyOpen ? "Collapse all" : "Expand all"}
         hidden={!search.total}
-        onclick={toggleAll}
+        onclick={() => search.toggleAll()}
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          {#if anyOpen}
-            <path d="m7 20 5-5 5 5M7 4l5 5 5-5" />
-          {:else}
-            <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
-          {/if}
-        </svg>
+        <Icon name={search.anyOpen ? "chevrons-down-up" : "chevrons-up-down"} />
       </button>
       <p class="status" class:error={search.error}>
         {#if search.error}
@@ -215,21 +192,14 @@
       {@render branch(group)}
     {/each}
   </div>
-</aside>
-{#if open}
-  <Resizer bind:width={settings.searchWidth} fallback={SIDEBAR_DEFAULTS.search} />
-{/if}
+</Sidebar>
 
 <style>
-  aside {
-    position: fixed; z-index: 20; top: 0; bottom: 0; left: 0;
-    display: flex; flex-direction: column; overflow-x: hidden; touch-action: pan-y;
+  /* The panel's own layout; the position, slide and border are Sidebar's. */
+  :global(.sidebar.search) {
+    display: flex; flex-direction: column; overflow-x: hidden;
     padding-top: calc(0.5rem + env(safe-area-inset-top));
-    background: var(--chrome); border-right: 1px solid var(--line);
-    transform: translateX(-100%); visibility: hidden;
-    transition: transform 0.18s ease, visibility 0s 0.18s;
   }
-  aside.open { transform: none; visibility: visible; transition: transform 0.18s ease; }
   .head { display: grid; gap: 0.4rem; min-width: 0; padding: 0 0.6rem; border-bottom: 1px solid var(--line); }
   /* Starts right of the search toggle (a fixed corner button) so the two read as one row:
      the button's 0.5rem inset + its width + a gap, less this panel's own 0.6rem padding. */
@@ -247,7 +217,6 @@
   .opts :global(.seg) { flex: none; }
   /* About as tall as the checkbox label beside it. */
   .opts :global(.seg [data-toggle-group-item]) { padding: 0.05rem 0.7rem; font-size: 0.75rem; line-height: 1.2; }
-  /* The case-sensitivity switch: a small toggle button reading Aa. */
   .tools { display: flex; gap: 0.3rem; align-items: center; }
   /* The two small option buttons are bare icons (.btn-bare): equal squares. */
   .opts :global(:is(.gear, .case)) { flex: none; width: 1.4rem; height: 1.4rem; line-height: 1; }
@@ -261,7 +230,7 @@
   /* The chevrons have empty space around them in the icon box; pull the button left so the ink, not the box, lines up with the controls above. */
   .foldall { grid-column: 1; width: 1.2rem; height: 1.2rem; margin-left: -0.3rem; }
   .foldall[hidden] { display: none; }
-  .foldall svg { width: 0.85rem; height: 0.85rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  .foldall :global(svg) { width: 0.85rem; height: 0.85rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
   /* Measures how wide the hit font is, once per panel width (see lineChars). */
   .sample { position: absolute; visibility: hidden; white-space: nowrap; pointer-events: none; font-size: 0.8rem; }
   .status.error { color: #ff6b6b; }

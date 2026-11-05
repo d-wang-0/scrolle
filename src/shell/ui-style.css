@@ -37,17 +37,15 @@ html[data-ui] .btn { border: 0; background: var(--fill); }
 html[data-ui] .btn:hover:not(:disabled) { background: var(--fill-hover); }
 html[data-ui] .btn.primary { background: var(--accent); }
 html[data-ui] .btn.primary:hover { background: color-mix(in srgb, var(--accent) 85%, #fff); }
-html[data-ui] .corner .btn { background: color-mix(in srgb, var(--chrome) 85%, transparent); opacity: 1; }
-html[data-ui] .corner .btn:hover { background: color-mix(in srgb, var(--fill-hover) 100%, var(--chrome)); }
+html[data-ui] .corner .btn { opacity: 1; }
 /* Previous / next match arrows are bare glyphs. */
-html[data-ui] .btn.step, html[data-ui] .btn.step:hover { background: none !important; box-shadow: none !important; transform: none; }
+html[data-ui] .btn.step, html[data-ui] .btn.step:hover { background: none; box-shadow: none; transform: none; }
 html[data-ui] .btn.step:hover:not(:disabled) { color: var(--fg); }
 
-/* Inputs read as wells cut into the surface. Focus underlines the well; no ring. */
+/* Inputs read as wells cut into the surface. */
 html[data-ui] .query input { border: 0; outline: 0; background: var(--inset); transition: box-shadow 0.12s; }
 /* Focus only lifts the well's tone; no ring, underline or border. */
-html[data-ui] .query input:focus { outline: 0; box-shadow: none !important; background: color-mix(in srgb, var(--fg) 8%, var(--chrome)); }
-html[data-ui] select { border: 0 !important; background: var(--fill) !important; border-radius: 8px !important; }
+html[data-ui] .query input:focus { outline: 0; box-shadow: none; background: color-mix(in srgb, var(--fg) 8%, var(--chrome)); }
 /* Every checkbox (search's, the settings') gets one look: an unchecked box is a dark well, a checked one an accent chip with a tick. */
 html[data-ui] input[type="checkbox"] {
   appearance: none; -webkit-appearance: none; flex: none; width: 1rem; height: 1rem; margin: 0; cursor: pointer;
@@ -64,6 +62,25 @@ html[data-ui] .seg [data-toggle-group-item] { border-radius: 5px; color: var(--f
 html[data-ui] .seg [data-toggle-group-item]:hover:not([data-state="on"]) { color: var(--fg); background: var(--fill); }
 html[data-ui] .seg [data-toggle-group-item][data-state="on"] { background: var(--accent); color: #fff; }
 
+/* The chosen segment's chip slides to the new one instead of jumping. The segments are equal columns (`.seg` is a grid of 1fr), so where the
+   chip goes follows from which child is on and how many there are: --seg-i and --seg-n, set with :has() (up to four segments), no script.
+   The segments' own fill is cleared and the chip sits under them. */
+html[data-ui] .seg { position: relative; --seg-n: 2; --seg-i: 0; }
+html[data-ui] .seg:has(> :nth-child(3)) { --seg-n: 3; }
+html[data-ui] .seg:has(> :nth-child(4)) { --seg-n: 4; }
+html[data-ui] .seg:has(> :nth-child(2)[data-state="on"]) { --seg-i: 1; }
+html[data-ui] .seg:has(> :nth-child(3)[data-state="on"]) { --seg-i: 2; }
+html[data-ui] .seg:has(> :nth-child(4)[data-state="on"]) { --seg-i: 3; }
+html[data-ui] .seg [data-toggle-group-item] { position: relative; }
+html[data-ui] .seg::before {
+  content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) / var(--seg-n)); border-radius: 5px;
+  background: var(--accent); transform: translateX(calc(var(--seg-i) * 100%)); pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+html[data-ui] .seg:not(:has([data-state="on"]))::before { opacity: 0; }
+html[data-ui] .seg [data-toggle-group-item][data-state="on"] { background: transparent; }
+@media (prefers-reduced-motion: reduce) { html[data-ui] .seg::before { transition: none; } }
+
 /* Search hits: hover is a soft blue, the selected one a slightly darker blue. No outline, no bar. */
 html[data-ui] .hit:hover { background: var(--hover-hit); }
 html[data-ui] .hit.current, html[data-ui] .hit.current:hover { outline: 0; box-shadow: none; background: var(--sel-hit); }
@@ -74,26 +91,15 @@ html[data-ui] aside, html[data-ui] nav { border: 0; box-shadow: 0 0 32px var(--d
 html[data-ui] .head { border-bottom: 0; padding-bottom: 0.4rem; }
 html[data-ui] .popover hr { border-top: 0; height: 1px; background: var(--fill); }
 html[data-ui] .popover, html[data-ui] .note[role="dialog"] { border: 0; }
-html[data-ui] .note[role="dialog"]::before { border: 0 !important; }
-html[data-ui] .actions { border-top: 0 !important; }
+html[data-ui] .note[role="dialog"]::before { border: 0; }
+html[data-ui] .actions { border-top: 0; }
 
-/* Sliders: a sunken pill track, accent fill up to the value (--p, kept in step by ui-style.ts), a round white knob. */
-html[data-ui] input[type="range"] { -webkit-appearance: none; appearance: none; height: 18px; background: none; margin: 0; cursor: pointer; }
-html[data-ui] input[type="range"]::-webkit-slider-runnable-track {
-  height: 6px; border-radius: 999px;
-  background: linear-gradient(var(--accent), var(--accent)) 0 / var(--p, 50%) 100% no-repeat, var(--inset);
-}
-html[data-ui] input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: var(--inset); }
-html[data-ui] input[type="range"]::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--accent); }
-html[data-ui] input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -5px; border: 0; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); transition: transform 0.1s;
-}
-html[data-ui] input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
-html[data-ui] input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); }
-html[data-ui] input[type="range"]:active::-webkit-slider-thumb { transform: scale(0.95); }
-html[data-ui] input[type="range"]:focus-visible { outline: 0; }
-html[data-ui] input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 4px var(--hover-hit); }
+/* Sliders: a sunken pill track, accent fill up to the value, a round white knob that grows a little on hover and shrinks when pressed. */
+html[data-ui] .slider-track { background: var(--inset); }
+html[data-ui] .slider-thumb { transition: scale 0.1s, box-shadow 0.1s; }
+html[data-ui] .slider:hover .slider-thumb { scale: 1.12; }
+html[data-ui] .slider-thumb[data-active] { scale: 0.95; }
+html[data-ui] .slider-thumb:focus-visible { outline: 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 4px var(--hover-hit); }
 
 /* Each variant's popover radius, so what sits inside a popover can round concentrically (see .opt). */
 html[data-ui="lite"], html[data-ui="flat"] { --pop-r: 14px; }
@@ -101,8 +107,9 @@ html[data-ui="raised"] { --pop-r: 16px; }
 html[data-ui="glass"] { --pop-r: 18px; }
 
 /* ---------- Lite: today's look, minus the borders, with rounder corners ---------- */
-html[data-ui="lite"] .btn { background: color-mix(in srgb, var(--fill) 55%, transparent); border-radius: 10px; }
-html[data-ui="lite"] .btn:hover:not(:disabled) { background: var(--fill-hover); }
+html[data-ui="lite"] .btn { border-radius: 10px; }
+html[data-ui="lite"] .btn:not(.step) { background: color-mix(in srgb, var(--fill) 55%, transparent); }
+html[data-ui="lite"] .btn:not(.step):hover:not(:disabled) { background: var(--fill-hover); }
 html[data-ui="lite"] .btn.primary { background: var(--accent); }
 html[data-ui="lite"] .corner .btn { background: var(--chrome); }
 html[data-ui="lite"] .corner .btn:hover { background: color-mix(in srgb, var(--fill) 100%, var(--chrome)); }
@@ -118,14 +125,15 @@ html[data-ui="flat"] .popover, html[data-ui="flat"] .note[role="dialog"] { borde
 /* ---------- Raised: layered surfaces lit from above ----------
    No gradients and no dark wells. Depth comes from elevation: a raised thing is a slightly lighter solid
    surface with a 1px light catch on its top edge, and floating things carry a long, soft, layered shadow. */
-html[data-ui="raised"] .btn:not(.primary):not(.step), html[data-ui="raised"] .corner .btn {
+html[data-ui="raised"] .btn:not(.primary):not(.step):not(:where(.corner .btn)), html[data-ui="raised"] .corner .btn {
   border-radius: 10px;
   background: color-mix(in srgb, var(--fill) 100%, var(--chrome));
   box-shadow: inset 0 1px 0 var(--hi), 0 1px 1px rgba(0, 0, 0, 0.2), 0 2px 6px -2px var(--drop);
 }
-html[data-ui="raised"] .btn:not(.primary):not(.step):hover:not(:disabled) { background: color-mix(in srgb, var(--fill-hover) 100%, var(--chrome)); }
+html[data-ui="raised"] .btn:not(.primary):not(.step):not(:where(.corner .btn)):hover:not(:disabled) { background: color-mix(in srgb, var(--fill-hover) 100%, var(--chrome)); }
 html[data-ui="raised"] .btn { transition: transform 0.1s, background 0.15s, box-shadow 0.15s; }
-html[data-ui="raised"] .btn:not(:disabled):active { transform: scale(0.97); box-shadow: inset 0 1px 0 var(--hi); }
+html[data-ui="raised"] .btn:not(:disabled):active { transform: scale(0.97); }
+html[data-ui="raised"] .btn:not(.step):not(:disabled):active { box-shadow: inset 0 1px 0 var(--hi); }
 html[data-ui="raised"] .btn.primary {
   border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px -2px color-mix(in srgb, var(--accent) 60%, transparent);
 }
@@ -148,10 +156,14 @@ html[data-ui="raised"][data-bg]:not([data-theme="light"]) .popover, html[data-ui
 /* Raised: the search and contents sidebars only overlap the text on narrow windows (same breakpoint as app.css), so only then do they
    get the blur. Their fill stays the chrome colour (black on black), just not fully opaque. */
 @media (max-width: 640px) {
-  html[data-ui="raised"] :is(aside, nav) {
+  html[data-ui="raised"] :is(aside, nav) { background: transparent; }
+  html[data-ui="raised"] :is(aside, nav)::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
     background: var(--grain), color-mix(in srgb, var(--chrome) var(--glass-bg), transparent);
     -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
   }
+  html[data-ui="raised"] aside .group { background: transparent; -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); }
+  html[data-ui="raised"] aside .group:hover { background: var(--hover-hit); }
 }
 
 /* ---------- Glass: pills and translucent, blurred panels with a lit rim ---------- */
@@ -164,20 +176,39 @@ html[data-ui="glass"] .btn:not(.primary):not(.step) { box-shadow: inset 0 0 0 0.
 /* A faint grain over each blurred surface. A blur of dark, low-contrast shapes has only a handful of brightness levels to step
    through, which shows as bands; the grain dithers the steps so the falloff reads as a smooth gradient. */
 html[data-ui="glass"], html[data-ui="raised"] { --glass-bg: 86%; --glass-blur: 16px; --glass-filter: blur(var(--glass-blur)) brightness(0.7) saturate(0.5); --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E"); }
-html[data-ui="glass"] aside, html[data-ui="glass"] nav, html[data-ui="glass"] .popover, html[data-ui="glass"] .note[role="dialog"] {
+html[data-ui="glass"] .popover, html[data-ui="glass"] .note[role="dialog"] {
   background: var(--grain), color-mix(in srgb, var(--chrome) var(--glass-bg), transparent);
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
 }
+/* The sidebars' glass sits on a ::before, not on the panel itself: a panel with its own backdrop-filter is a backdrop root, which would
+   hide the hits from the pinned headings' blur below. */
+html[data-ui="glass"] :is(aside, nav) { background: transparent; }
+html[data-ui="glass"] :is(aside, nav)::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--grain), color-mix(in srgb, var(--chrome) var(--glass-bg), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+/* Search's pinned chapter headings are opaque in the base styles. On a translucent panel they take no fill of their own and blur what
+   scrolls beneath them instead (the usual frosted-header pattern). */
+html[data-ui="glass"] aside .group { background: transparent; -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); }
+html[data-ui="glass"] aside .group:hover { background: var(--hover-hit); }
 html[data-ui="glass"] .popover, html[data-ui="glass"] .note[role="dialog"] { border-radius: 18px; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 1px 0 var(--hi), 0 12px 40px var(--drop); }
 
 /* ---------- A very dark grey line along the inner edge of the sidebars when the chrome is as black as the book ---------- */
 html[data-bg="black"]:not([data-theme="light"]) aside { box-shadow: 1px 0 0 #222224, 0 0 32px var(--drop, transparent); }
 html[data-bg="black"]:not([data-theme="light"]) nav { box-shadow: -1px 0 0 #222224, 0 0 32px var(--drop, transparent); }
 
+/* Where the sidebars are translucent (glass always, raised on narrow windows) the line is dropped: the blur already separates them from the book. */
+html[data-bg="black"]:not([data-theme="light"])[data-ui="glass"] aside { box-shadow: 0 0 32px var(--drop, transparent); }
+html[data-bg="black"]:not([data-theme="light"])[data-ui="glass"] nav { box-shadow: 0 0 32px var(--drop, transparent); }
+@media (max-width: 640px) {
+  html[data-bg="black"]:not([data-theme="light"])[data-ui="raised"] aside, html[data-bg="black"]:not([data-theme="light"])[data-ui="raised"] nav { box-shadow: 0 0 32px var(--drop, transparent); }
+}
+
 /* The corner buttons take the glass of the surfaces they float over: the usual button fill laid over the chrome colour at --glass-bg,
    with the same backdrop filter. Where those variables are not defined (lite, flat) the fallbacks keep them opaque. */
 html[data-ui] .corner .btn {
-  background: linear-gradient(var(--fill), var(--fill)), color-mix(in srgb, var(--chrome) var(--glass-bg, 100%), transparent) !important;
+  background: linear-gradient(var(--fill), var(--fill)), color-mix(in srgb, var(--chrome) var(--glass-bg, 100%), transparent);
   -webkit-backdrop-filter: var(--glass-filter, none); backdrop-filter: var(--glass-filter, none);
 }
-html[data-ui] .corner .btn:hover:not(:disabled) { background: linear-gradient(var(--fill-hover), var(--fill-hover)), color-mix(in srgb, var(--chrome) var(--glass-bg, 100%), transparent) !important; }
+html[data-ui] .corner .btn:hover:not(:disabled) { background: linear-gradient(var(--fill-hover), var(--fill-hover)), color-mix(in srgb, var(--chrome) var(--glass-bg, 100%), transparent); }

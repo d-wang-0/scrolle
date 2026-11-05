@@ -3,6 +3,8 @@
 // inline tags but never across paragraphs). Search works on offsets into this
 // string, so they agree on where a piece of text is.
 
+import { firstWhere } from "./bsearch.js";
+
 const SKIP = new Set(["style", "script", "template", "title", "desc"]);
 const BLOCK = new Set([
   "address", "article", "aside", "blockquote", "br", "dd", "details", "div", "dl", "dt", "figcaption",
@@ -17,6 +19,16 @@ export interface SectionText {
   nodes: Text[];
   /** Start offset of each text node within `text`. */
   starts: number[];
+}
+
+/** The text position under a point on screen, or null when there is none. Firefox and Chromium name it differently. */
+export function caretAt(x: number, y: number): { node: Node; offset: number } | null {
+  if (document.caretPositionFromPoint) {
+    const p = document.caretPositionFromPoint(x, y);
+    return p ? { node: p.offsetNode, offset: p.offset } : null;
+  }
+  const r = document.caretRangeFromPoint?.(x, y);
+  return r ? { node: r.startContainer, offset: r.startOffset } : null;
 }
 
 export function flattenSection(el: HTMLElement): SectionText {
@@ -52,16 +64,7 @@ export function flattenSection(el: HTMLElement): SectionText {
 
 /** Text node holding `pos`; for an end position, the node whose text ends at or after it. */
 export function locate(sec: SectionText, pos: number, isEnd: boolean): { node: Text; off: number } {
-  let lo = 0;
-  let hi = sec.starts.length - 1;
-  let i = 0;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    if (isEnd ? sec.starts[mid]! < pos : sec.starts[mid]! <= pos) {
-      i = mid;
-      lo = mid + 1;
-    } else hi = mid - 1;
-  }
+  const i = Math.max(0, firstWhere(sec.starts.length, (k) => (isEnd ? sec.starts[k]! >= pos : sec.starts[k]! > pos)) - 1);
   const node = sec.nodes[i]!;
   const off = pos - sec.starts[i]!;
   // A start that falls in a block-boundary newline belongs to the next node.
@@ -81,12 +84,6 @@ export function rangeFor(sec: SectionText, start: number, end: number): Range {
 
 /** Text offset of the first text node at or after `el` in document order. */
 export function offsetOf(sec: SectionText, el: Element): number {
-  let lo = 0;
-  let hi = sec.nodes.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (el.compareDocumentPosition(sec.nodes[mid]!) & Node.DOCUMENT_POSITION_FOLLOWING) hi = mid;
-    else lo = mid + 1;
-  }
+  const lo = firstWhere(sec.nodes.length, (k) => (el.compareDocumentPosition(sec.nodes[k]!) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
   return lo < sec.nodes.length ? sec.starts[lo]! : sec.text.length;
 }

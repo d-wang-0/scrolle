@@ -34,7 +34,7 @@ export async function toggleFullscreen(): Promise<void> {
 
 /** Whether the window is fullscreen. In a browser this also catches the browser's own F11, which
  *  the Fullscreen API does not report, by comparing the viewport with the screen. */
-export async function isFullscreen(): Promise<boolean> {
+async function isFullscreen(): Promise<boolean> {
   if (inTauri()) return getCurrentWindow().isFullscreen();
   return document.fullscreenElement !== null || (innerWidth === screen.width && innerHeight === screen.height);
 }
